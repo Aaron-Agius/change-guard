@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SEO Change Guard</title>
+<link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>SEO Change Guard</h1>
+    <span id="baseline-status" class="status-badge hidden"></span>
+  </header>
+
+  <div id="message" class="message hidden" role="alert"></div>
+
+  <div class="toolbar">
+    <button id="btn-capture" type="button" class="btn primary">Capture Baseline</button>
+    <button id="btn-compare" type="button" class="btn secondary" disabled>Compare With Baseline</button>
+  </div>
+  <div class="toolbar">
+    <button id="btn-export" type="button" class="btn secondary" disabled>Export Report</button>
+    <button id="btn-delete" type="button" class="btn danger" disabled>Delete Baseline</button>
+  </div>
+
+  <div id="replace-confirm" class="confirm-box hidden">
+    <p>A baseline already exists for this page. Replace it?</p>
+    <div class="toolbar">
+      <button id="btn-replace-yes" type="button" class="btn danger small">Replace</button>
+      <button id="btn-replace-no" type="button" class="btn small">Cancel</button>
+    </div>
+  </div>
+
+  <div id="results" class="hidden">
+    <div id="change-summary"></div>
+    <div id="diff-output"></div>
+    <div id="screenshots" class="hidden">
+      <h2>Screenshots (viewport-only)</h2>
+      <div class="screenshot-row">
+        <figure><figcaption>Baseline</figcaption><img id="screenshot-baseline" alt="Baseline screenshot" /></figure>
+        <figure><figcaption>Current</figcaption><img id="screenshot-current" alt="Current screenshot" /></figure>
+      </div>
+    </div>
+  </div>
+
+  <div id="baseline-info" class="baseline-info hidden">
+    <p></p>
+  </div>
+
+  <footer>
+    <p>Local only. Nothing leaves your browser.</p>
+  </footer>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>

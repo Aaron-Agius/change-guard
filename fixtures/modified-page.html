@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SEO Modified Fixture</title>
+  <meta name="description" content="First baseline description" />
+  <meta name="description" content="Second baseline description" />
+  <link rel="canonical" href="/changed-canonical" />
+  <link rel="canonical" href="https://seo-fixture.test/absolute-canonical" />
+  <meta name="robots" content="noindex, follow" />
+  <meta name="googlebot" content="index, nofollow" />
+  <style>
+    body { font-family: sans-serif; margin: 24px; }
+    main { max-width: 720px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>SEO Baseline Fixture</h1>
+    <p>This deterministic page exercises SEO extraction.</p>
+
+    <section>
+      <h2>Internal links</h2>
+      <ul>
+        <li><a href="/internal-one">Internal one</a></li>
+        <li><a href="/internal-two">Internal two</a></li>
+        <li><a href="/internal-three?query=kept">Internal three</a></li>
+        <li><a href="/nested/internal-four">Internal four</a></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>External links</h2>
+      <ul>
+        <li><a href="https://external-one.test/page">External one</a></li>
+        <li><a href="https://external-two.test/page">External two</a></li>
+        <li><a href="https://external-four.test/added">External four</a></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Review links</h2>
+      <p><a href="http://192.168.1.1/admin">Private administration</a></p>
+    </section>
+
+    <section>
+      <h2>Supporting heading</h2>
+      <h3>Supporting subheading</h3>
+      <p>The page retains a compact visual layout for screenshot capture.</p>
+    </section>
+  </main>
+</body>
+</html>
