@@ -1,175 +1,62 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-
-const { extractSeoSnapshot } = require('../lib/extract');
-
-function node(tagName, attributes = {}, textContent = '') {
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { extractSeoSnapshot } = require("../lib/extract.js");
+function node(attrs = {}, text = "", tag = "") {
+  return { getAttribute: name => attrs[name] ?? null, textContent: text, tagName: tag };
+}
+function document(options = {}) {
+  const groups = {
+    "meta[name]": options.meta || [],
+    "link[rel]": options.links || [],
+    "a[href]": (options.anchors || []).map(href => node({ href })),
+    "h1, h2, h3": options.headings || []
+  };
   return {
-    tagName: tagName.toUpperCase(),
-    textContent,
-    getAttribute(name) {
-      return Object.hasOwn(attributes, name) ? attributes[name] : null;
-    },
+    URL: options.url || "https://example.test/page?q=1#section",
+    baseURI: options.base || options.url || "https://example.test/page?q=1",
+    title: options.title || "Fixture",
+    querySelectorAll: selector => groups[selector] || []
   };
 }
-
-function anchor(href) {
-  return node('a', href ? { href } : {});
-}
-
-function fakeDocument({
-  url = 'https://example.test/page',
-  baseURI = url,
-  selectors = {},
-} = {}) {
-  const empty = [];
-  return {
-    URL: url,
-    baseURI,
-    querySelectorAll(selector) {
-      return Object.hasOwn(selectors, selector) ? selectors[selector] : empty;
-    },
-  };
-}
-
-function makeSnapshot(options) {
-  return extractSeoSnapshot(fakeDocument(options));
-}
-
-test('extracts a normal snapshot', () => {
-  const snapshot = makeSnapshot({
-    selectors: {
-      'title': [node('title', {}, 'Normal Page')],
-      'meta[name="description"]': [node('meta', { content: 'Description' })],
-      'link[rel="canonical"]': [node('link', { href: 'https://example.test/canonical' })],
-      'meta[name="robots"]': [node('meta', { content: 'noindex, nofollow' })],
-      'h1, h2, h3, h4, h5, h6': [node('h1', {}, 'Main'), node('h2', {}, 'Sub')],
-      'a': [
-        anchor('https://example.test/internal'),
-        anchor('https://external.test/page'),
-      ],
-    },
-  });
-
-  assert.equal(snapshot.title, 'Normal Page');
-  assert.deepEqual(snapshot.metaDescriptions, ['Description']);
-  assert.deepEqual(snapshot.canonicals, ['https://example.test/canonical']);
-  assert.deepEqual(snapshot.robots, ['noindex, nofollow']);
-  assert.deepEqual(snapshot.headings, [
-    { level: 1, text: 'Main' },
-    { level: 2, text: 'Sub' },
-  ]);
-  assert.deepEqual(snapshot.anchors, {
-    internal: ['https://example.test/internal'],
-    external: ['https://external.test/page'],
-    suspicious: [],
-  });
-  assert.equal(typeof snapshot.timestamp, 'string');
+test("preserves duplicate and case-insensitive metadata, resolves canonicals, keeps query", () => {
+  const result = extractSeoSnapshot(document({
+    meta: [node({ name: "Description", content: "One" }), node({ name: "description", content: "Two" }),
+      node({ name: "ROBOTS", content: "noindex" }), node({ name: "GoogleBot", content: "nofollow" })],
+    links: [node({ rel: "CANONICAL", href: "/canonical" }), node({ rel: "alternate canonical", href: "/other" })]
+  }));
+  assert.equal(result.url, "https://example.test/page?q=1");
+  assert.deepEqual(result.metaDescriptions, ["One", "Two"]);
+  assert.deepEqual(result.robots, ["noindex", "googlebot: nofollow"]);
+  assert.deepEqual(result.canonicals, ["https://example.test/canonical", "https://example.test/other"]);
 });
-
-test('preserves duplicate descriptions and canonicals and de-duplicates links', () => {
-  const snapshot = makeSnapshot({
-    selectors: {
-      'meta[name="description"]': [
-        node('meta', { content: 'same' }),
-        node('meta', { content: 'same' }),
-      ],
-      'link[rel="canonical"]': [
-        node('link', { href: 'https://example.test/a' }),
-        node('link', { href: 'https://example.test/a' }),
-      ],
-      'a': [
-        anchor('https://example.test/twice'),
-        anchor('https://example.test/twice'),
-      ],
-    },
-  });
-
-  assert.deepEqual(snapshot.metaDescriptions, ['same', 'same']);
-  assert.deepEqual(snapshot.canonicals, ['https://example.test/a', 'https://example.test/a']);
-  assert.deepEqual(snapshot.anchors.internal, ['https://example.test/twice']);
+test("cross-origin base affects resolution but not page-origin classification", () => {
+  const result = extractSeoSnapshot(document({
+    base: "https://cdn.test/folder/", anchors: ["child", "https://example.test/internal", "child"]
+  }));
+  assert.deepEqual(result.anchors.internal, ["https://example.test/internal"]);
+  assert.deepEqual(result.anchors.external, ["https://cdn.test/folder/child"]);
 });
-
-test('resolves relative links against document.baseURI', () => {
-  const snapshot = makeSnapshot({
-    url: 'https://example.test/articles/current',
-    baseURI: 'https://example.test/articles/base/index.html',
-    selectors: {
-      'a': [
-        anchor('/root'),
-        anchor('../parent'),
-        anchor('child'),
-        anchor('//cdn.example.test/asset'),
-      ],
-    },
-  });
-
-  assert.deepEqual(snapshot.anchors, {
-    internal: [
-      'https://example.test/root',
-      'https://example.test/articles/parent',
-      'https://example.test/articles/base/child',
-    ],
-    external: ['https://cdn.example.test/asset'],
-    suspicious: [],
-  });
+test("private links remain internal or external while also flagged", () => {
+  const result = extractSeoSnapshot(document({
+    url: "http://127.0.0.1:3000/page", anchors: ["/internal", "http://192.168.1.1/a", "http://localhost.evil.test/", "http://[::1]/"]
+  }));
+  assert.deepEqual(result.anchors.internal, ["http://127.0.0.1:3000/internal"]);
+  assert.equal(result.anchors.suspicious.length, 3);
+  assert.ok(!result.anchors.suspicious.some(u => u.includes("evil.test")));
 });
-
-test('keeps hostile strings as data and ignores non-navigation schemes', () => {
-  const hostile = '<img src=x onerror=alert(1)>';
-  const snapshot = makeSnapshot({
-    selectors: {
-      'title': [node('title', {}, hostile)],
-      'h1, h2, h3, h4, h5, h6': [node('h1', {}, hostile)],
-      'a': [
-        anchor('javascript:alert(1)'),
-        anchor('mailto:user@example.test'),
-        anchor('tel:+15555555555'),
-        anchor('data:text/html,<script>alert(1)</script>'),
-        anchor('blob:https://example.test/id'),
-      ],
-    },
-  });
-
-  assert.equal(snapshot.title, hostile);
-  assert.deepEqual(snapshot.headings, [{ level: 1, text: hostile }]);
-  assert.deepEqual(snapshot.anchors, { internal: [], external: [], suspicious: [] });
+test("hostile text stays data, non-navigation schemes ignored, heading text not truncated", () => {
+  const text = '<img src=x onerror=alert(1)>' + "x".repeat(600);
+  const result = extractSeoSnapshot(document({
+    title: text, meta: [node({ name: "description", content: text })],
+    headings: [node({}, text, "H3")],
+    anchors: ["javascript:alert(1)", "mailto:x@test", "tel:1", "data:text/html,x", "blob:https://example.test/x", "ftp://test/a", "/real"]
+  }));
+  assert.equal(result.title, text);
+  assert.equal(result.headings[0].text, text);
+  assert.equal(result.anchors.internal.length, 1);
+  assert.equal(result.anchors.external.length, 0);
 });
-
-test('handles missing SEO tags and removes URL fragments', () => {
-  const snapshot = makeSnapshot({ url: 'https://example.test/page#fragment' });
-
-  assert.equal(snapshot.url, 'https://example.test/page');
-  assert.equal(snapshot.title, '');
-  assert.deepEqual(snapshot.metaDescriptions, []);
-  assert.deepEqual(snapshot.canonicals, []);
-  assert.deepEqual(snapshot.robots, []);
-  assert.deepEqual(snapshot.headings, []);
-  assert.deepEqual(snapshot.anchors, { internal: [], external: [], suspicious: [] });
-});
-
-test('classifies private, loopback, and localhost links as suspicious', () => {
-  const snapshot = makeSnapshot({
-    selectors: {
-      'a': [
-        anchor('http://localhost:3000/admin'),
-        anchor('http://127.0.0.1:8080/loop'),
-        anchor('http://10.1.2.3/private'),
-        anchor('http://172.16.0.1/private'),
-        anchor('http://172.31.255.255/private'),
-        anchor('http://192.168.1.1/private'),
-        anchor('http://172.32.0.1/not-private'),
-      ],
-    },
-  });
-
-  assert.deepEqual(snapshot.anchors.suspicious, [
-    'http://localhost:3000/admin',
-    'http://127.0.0.1:8080/loop',
-    'http://10.1.2.3/private',
-    'http://172.16.0.1/private',
-    'http://172.31.255.255/private',
-    'http://192.168.1.1/private',
-  ]);
-  assert.deepEqual(snapshot.anchors.external, ['http://172.32.0.1/not-private']);
+test("empty canonical is not silently converted to current URL", () => {
+  const result = extractSeoSnapshot(document({ links: [node({ rel: "canonical", href: "" })] }));
+  assert.deepEqual(result.canonicals, [""]);
 });

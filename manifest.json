@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "SEO Change Guard",
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "minimum_chrome_version": "106",
   "description": "Capture and compare a page's SEO baseline locally. No data leaves your browser.",
-  "permissions": ["activeTab", "scripting", "storage", "downloads"],
+  "permissions": ["activeTab", "scripting", "storage"],
   "action": {
     "default_popup": "src/popup.html",
     "default_title": "SEO Change Guard"

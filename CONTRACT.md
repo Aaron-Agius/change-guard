@@ -6,7 +6,15 @@
 - src/popup.html + src/popup.css + src/popup.js + src/popup-ui.test.js: UI WORKER
 - tests/browser-*.test.js + fixtures/ + verification: VERIFICATION WORKER (no impl edits)
 
-## Snapshot Schema (stored in chrome.storage.local under key "baselines")
+## Snapshot Schema
+
+Storage key: `page:<full URL without fragment>`.
+Value: `{ baseline: Snapshot, current: Snapshot | null }`.
+The legacy `baselines` map is read for compatibility and cleaned on deletion.
+`suspicious` overlaps internal/external classification; it is a warning, not a change.
+Snapshots also contain `warnings: string[]` for partial screenshot captures.
+
+Snapshot example:
 {
   "https://example.com/page?x=1": {
     "url": "https://example.com/page?x=1",
@@ -29,11 +37,18 @@
 ## Baseline Key = full URL minus fragment (URL API, query params preserved)
 
 ## Message Types (popup -> background service worker)
-- CAPTURE_BASELINE: { tabId } -> { ok, error? }
-- COMPARE_BASELINE: { tabId } -> { ok, report?, error? }
-- DELETE_BASELINE: { tabId } -> { ok }
-- GET_BASELINE: { tabId } -> { ok, baseline? }
-- EXPORT_REPORT: { tabId } -> { ok, reportHtml? } (popup downloads)
+
+Every message includes `{ type, tabId, expectedUrl }`. The background checks
+the tab is still active and its normalized URL matches.
+
+- CAPTURE_BASELINE: optional `replaceConfirmed: true`; required for replacement.
+- COMPARE_BASELINE: returns `{ ok, report?, error? }`; persists latest comparison.
+- DELETE_BASELINE: deletes baseline and latest comparison.
+- GET_BASELINE: returns `{ ok, baseline, lastReport }`.
+- EXPORT_REPORT: returns `{ ok, reportHtml }` for latest comparison, or baseline-only.
+
+Capture returns `{ ok, snapshot: { url, timestamp }, warnings }`.
+Errors return `{ ok: false, error }`. Operations are serialized in the background.
 
 ## Capture Uses chrome.scripting.executeScript with func returning snapshot data.
 ## Screenshot via chrome.tabs.captureVisibleTab.

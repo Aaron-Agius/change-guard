@@ -1,51 +1,17 @@
-"use strict";
-const { describe, it } = require("node:test");
+const test = require("node:test");
 const assert = require("node:assert/strict");
-
-// Minimal mock of the popup.js formatting logic for unit testing
-function formatChangeCount(count) {
-  if (typeof count !== "number" || isNaN(count) || count < 0) return "0 changes";
-  return `${count} change${count === 1 ? "" : "s"} detected.`;
-}
-
-function formatBaselineDate(iso) {
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return "Unknown date";
-    return d.toLocaleString();
-  } catch { return "Unknown date"; }
-}
-
-function safeTextContent(text) {
-  // In the real popup this is done by setting textContent, which is inherently safe.
-  // Here we simulate by ensuring no HTML tags can pass through.
-  return String(text ?? "");
-}
-
-describe("popup UI formatting", () => {
-  it("formats change count correctly", () => {
-    assert.equal(formatChangeCount(0), "0 changes detected.");
-    assert.equal(formatChangeCount(1), "1 change detected.");
-    assert.equal(formatChangeCount(3), "3 changes detected.");
-  });
-
-  it("formats baseline date", () => {
-    const iso = "2026-09-14T12:00:00.000Z";
-    const result = formatBaselineDate(iso);
-    assert.ok(typeof result === "string");
-    assert.ok(result.length > 0);
-  });
-
-  it("handles invalid dates", () => {
-    assert.equal(formatBaselineDate("not-a-date"), "Unknown date");
-  });
-
-  it("text content is never HTML-interpreted", () => {
-    const hostile = "<script>alert('xss')</script>";
-    const rendered = safeTextContent(hostile);
-    // textContent assignment would make this inert in the real DOM
-    assert.equal(rendered, hostile);
-    // But we verify the UI never puts this into innerHTML
-    // (asserted separately in the static analysis test)
-  });
+const fs = require("node:fs");
+const path = require("node:path");
+test("popup has all required controls, privacy disclosure and no inline event handlers", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../src/popup.html"), "utf8");
+  for (const id of ["btn-capture", "btn-compare", "btn-export", "btn-delete", "btn-replace-yes", "btn-replace-no"]) {
+    assert.ok(html.includes(`id="${id}"`));
+  }
+  assert.match(html, /sensitive/);
+  assert.doesNotMatch(html, /\sonclick=/i);
+});
+test("popup does not use HTML injection or external resources", () => {
+  const js = fs.readFileSync(path.join(__dirname, "../src/popup.js"), "utf8");
+  assert.doesNotMatch(js, /\.innerHTML|insertAdjacentHTML|\beval\(/);
+  assert.doesNotMatch(js, /\bfetch\(/);
 });

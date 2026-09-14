@@ -1,5 +1,5 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { width: 360px; font-family: system-ui, -apple-system, sans-serif; font-size: 13px; color: #1a1a1a; background: #fafafa; }
+body { width: 420px; max-width: 100%; font-family: "Trebuchet MS", sans-serif; font-size: 13px; color: #1a1a1a; background: #fafafa; }
 #app { padding: 12px 14px; }
 header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 h1 { font-size: 15px; font-weight: 600; }
@@ -29,7 +29,7 @@ h1 { font-size: 15px; font-weight: 600; }
 .diff-section h3 { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
 .diff-item { padding: 6px 8px; border-radius: 4px; font-size: 11px; line-height: 1.4; margin-bottom: 3px; background: #f9fafb; border: 1px solid #e5e7eb; }
 .diff-item .label { font-weight: 600; color: #6b7280; font-size: 10px; text-transform: uppercase; }
-.diff-item .before { color: #991b1b; text-decoration: line-through; }
+.diff-item .before { color: #991b1b; border-bottom: 1px solid #e0e5e2; padding-bottom: 6px; margin-bottom: 6px; }
 .diff-item .after { color: #166534; }
 .diff-item .neutral { color: #374151; }
 .screenshot-row { display: flex; gap: 8px; margin-top: 6px; }
@@ -40,3 +40,14 @@ h1 { font-size: 15px; font-weight: 600; }
 footer { margin-top: 10px; padding-top: 6px; border-top: 1px solid #e5e7eb; }
 footer p { font-size: 10px; color: #9ca3af; }
 .hidden { display: none !important; }
+.diff-item .label { display: block; text-transform: none; margin-bottom: 3px; }
+.diff-item .value { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+.report-meta, .baseline-info p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.warning { background: #fff4d6; padding: 10px; margin-top: 10px; overflow-wrap: anywhere; border-left: 3px solid #a57616; }
+.warning h3 { font-size: 12px; margin-bottom: 6px; }
+.warning p { margin-top: 4px; }
+#screenshots h2 { font-size: 13px; margin-top: 14px; }
+.screenshot-row figure { min-width: 0; }
+footer p { color: #56655e; line-height: 1.5; margin-bottom: 4px; }
+.btn.primary { background: #175b46; border-color: #175b46; }
+.btn.primary:hover { background: #124936; }
